@@ -6,48 +6,61 @@ from typing import Any
 
 import curl_cffi
 
-from custom_requests.zap_listing_model import ZapListing
-from misc.save_json import SaveJSON
+from model.listing_model import Listing
+from misc.save_data import SaveData
 from misc.url_parser import URLParser
 
 logger = logging.getLogger(__name__)
 
 
 class ZapRequest:
-    def __init__(self, config: Any, **kwargs):
+    def __init__(self, config: Any, filters: Any, **kwargs):
         self.base_url = config['base_url']
         self.parsed_api_url = URLParser(config['data_api'])
         self.session = curl_cffi.Session()
         self.user_id = None
-        self.save_json = SaveJSON()
-        self.save_data = True if config['save_json_listings'] == 'True' else False
+        self.save_data = SaveData()
+        self.save_data_json = True if config['save_json_listings'] == 'True' else False
+        self.save_data_csv = True if config['save_json_listings'] == 'True' else False
+        self.filters = filters
+        self.get_user_id_from_cookies()
 
-    def get_all(self) -> list[ZapListing]:
+    def get_all(self) -> list[Listing]:
         zap_listings = []
         results_per_page = 100
         total_results = 1
         page_number = 1
-        self.get_user_id_from_cookies()
+
         while page_number <= ceil(total_results / results_per_page):
             logger.info(f'Getting {results_per_page} results at page {page_number}')
             response = self.get(self.get_paginated_url(results_per_page, page_number))
             listing_json = response['search']['result']['listings']
-            if self.save_data:
-                self.save_json.add_listings(listing_json)
             logger.info(f'Found {len(listing_json)} listings at page {page_number}')
             for listing in listing_json:
-                listing_serialized = ZapListing(**listing)
+                listing_serialized = Listing(**listing)
                 zap_listings.append(listing_serialized)
+            if self.save_data_json:
+                self.save_data.add_listings_json(listing_json)
             total_results = response['page']['uriPagination']['totalListingCounter']
-            logger.info(f'There are {total_results} properties in total')
+            logger.info(f'There are {total_results} properties in total (page {page_number}/{ceil(total_results / results_per_page)})')
             page_number += 1
 
             if page_number <= ceil(total_results / results_per_page):
                 sleep_seconds = random.randint(5, 10)
                 logger.info(f'To avoid API blocks, will wait for {sleep_seconds} seconds before getting the next page')
                 time.sleep(sleep_seconds)
-        if self.save_data:
-            self.save_json.save_json_listings()
+
+        if self.save_data_csv:
+            self.save_data.add_listings_csv(zap_listings)
+            self.save_data.save_csv_listings(self.base_url)
+        if self.save_data_json:
+            self.save_data.save_json_listings()
+
+        n_listings_before_filter = len(zap_listings)
+        zap_listings = self.apply_filters(zap_listings)
+        n_listings_after_filter = len(zap_listings)
+        logger.info(f'Listing count - Before filtering: {n_listings_before_filter}, After filtering: {n_listings_after_filter}')
+
         return zap_listings
 
     def get_paginated_url(self, results_per_page: int, page_number: int) -> str:
@@ -95,4 +108,31 @@ class ZapRequest:
             logger.error(f'Could not find z_user_id in cookies')
             raise Exception(f'Could not find z_user_id in cookies')
         self.parsed_api_url.replace_query_params({'user': cookies['z_user_id']})
-        logger.info(f'Got z_user_id fro cookies: {cookies['z_user_id']}')
+        logger.info(f'Got z_user_id from cookies: {cookies['z_user_id']}')
+
+    def apply_filters(self, listings: list[Listing]) -> list[Listing]:
+        rent_price_min = self.filters['rent_price_min'].strip()
+        rent_price_min = float(rent_price_min) if rent_price_min.isdigit() else 0
+        rent_price_max = self.filters['rent_price_max'].strip()
+        rent_price_max = float(rent_price_max) if rent_price_max.isdigit() else 9999999
+        neighborhood = self.filters['neighborhood'].strip()
+
+        logger.info(f'Applying rent price filter - Min: {rent_price_min}, Max: {rent_price_max}')
+        logger.info(f'Applying neighborhood filter for "{neighborhood}"')
+
+        return list(filter(
+            lambda listing: self.is_rent_price_ok(listing, rent_price_min, rent_price_max)
+                            and self.is_neighborhood_ok(listing, neighborhood)
+            , listings
+        ))
+
+    @staticmethod
+    def is_rent_price_ok(listing: Listing, rent_price_min: float = 0, rent_price_max: int = 9999999) -> bool:
+        rent_price = listing.listing.get_rental_pricing_info().price
+        return rent_price_min <= rent_price <= rent_price_max
+
+    @staticmethod
+    def is_neighborhood_ok(listing: Listing, neighborhood: str) -> bool:
+        if not neighborhood:
+            return True
+        return listing.listing.address.neighborhood == neighborhood

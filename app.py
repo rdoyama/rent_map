@@ -21,7 +21,8 @@ def main():
     config.read('config.ini')
 
     zap_configs = config['ZAP']
-    zap_api = ZapRequest(zap_configs)
+    filters_kmz = config['FILTERS_KMZ']
+    zap_api = ZapRequest(zap_configs, filters_kmz)
     zap_listings = zap_api.get_all()
 
     kmz = KMZ(zap_listings, zap_configs)
