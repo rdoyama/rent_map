@@ -21,7 +21,7 @@ class ZapRequest:
         self.user_id = None
         self.save_data = SaveData()
         self.save_data_json = True if config['save_json_listings'] == 'True' else False
-        self.save_data_csv = True if config['save_json_listings'] == 'True' else False
+        self.save_data_csv = True if config['save_csv_listings'] == 'True' else False
         self.filters = filters
         self.get_user_id_from_cookies()
 
@@ -46,7 +46,7 @@ class ZapRequest:
             page_number += 1
 
             if page_number <= ceil(total_results / results_per_page):
-                sleep_seconds = random.randint(5, 10)
+                sleep_seconds = random.randint(3, 7)
                 logger.info(f'To avoid API blocks, will wait for {sleep_seconds} seconds before getting the next page')
                 time.sleep(sleep_seconds)
 
@@ -111,14 +111,13 @@ class ZapRequest:
         logger.info(f'Got z_user_id from cookies: {cookies['z_user_id']}')
 
     def apply_filters(self, listings: list[Listing]) -> list[Listing]:
-        rent_price_min = self.filters['rent_price_min'].strip()
-        rent_price_min = float(rent_price_min) if rent_price_min.isdigit() else 0
-        rent_price_max = self.filters['rent_price_max'].strip()
-        rent_price_max = float(rent_price_max) if rent_price_max.isdigit() else 9999999
-        neighborhood = self.filters['neighborhood'].strip()
+        rent_price_min, rent_price_max, neighborhood = self.get_filter_params()
 
         logger.info(f'Applying rent price filter - Min: {rent_price_min}, Max: {rent_price_max}')
-        logger.info(f'Applying neighborhood filter for "{neighborhood}"')
+        if neighborhood:
+            logger.info(f'Applying neighborhood filter for "{neighborhood}"')
+        else:
+            logger.info(f'Neighborhood not selected - no filters will be applied for neighborhood')
 
         return list(filter(
             lambda listing: self.is_rent_price_ok(listing, rent_price_min, rent_price_max)
@@ -136,3 +135,15 @@ class ZapRequest:
         if not neighborhood:
             return True
         return listing.listing.address.neighborhood == neighborhood
+
+    def get_filter_params(self) -> tuple:
+        rent_price_min = self.filters['rent_price_min'].strip()
+        rent_price_min = max(float(rent_price_min), 0) if rent_price_min.isdigit() else 0
+        rent_price_max = self.filters['rent_price_max'].strip()
+        rent_price_max = max(float(rent_price_max), 0) if rent_price_max.isdigit() else 9999999
+        if rent_price_max <= rent_price_min:
+            logger.error('rent_price_max must be greater than rent_price_min')
+            raise Exception('rent_price_max must be greater than rent_price_min')
+        neighborhood = self.filters['neighborhood'].strip()
+
+        return rent_price_min, rent_price_max, neighborhood
