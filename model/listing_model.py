@@ -81,9 +81,13 @@ class ListingModel:
     whatsappNumber: str = "Not informed"
     bedrooms: list[int] = ()
     pricingInfos: list[PricingInfo] = ()
+    unitFloor: int = 0
 
-    def get_rental_pricing_info(self) -> PricingInfo:
-        return list(filter(lambda p: p.businessType == 'RENTAL', self.pricingInfos))[0]
+    def get_rental_pricing_info(self) -> PricingInfo | None:
+        rent = list(filter(lambda p: p.businessType == 'RENTAL', self.pricingInfos))
+        if len(rent) > 0:
+            return rent[0]
+        return None
 
 
 @dataclass(config=ConfigDict(extra='ignore'))
@@ -133,6 +137,8 @@ class Listing:
         ])
 
     def get_csv_line(self, base_url: str, separator: str = ';'):
+        if self.listing.get_rental_pricing_info() is None:
+            return None
         return separator.join([
             self.listing.title,
             self.listing.address.get_address(),

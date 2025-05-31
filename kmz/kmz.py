@@ -25,7 +25,11 @@ class KMZ:
             lat, lon = address_point.get_lat_lon()
 
             general_description = listing.listing.description
-            pricing_description = listing.listing.get_rental_pricing_info().get_pricing_description()
+            pricing_description = listing.listing.get_rental_pricing_info()
+            if pricing_description is None:
+                logger.info(f"Listing with href {listing.link.href} does not have rent price")
+                continue
+            pricing_description = pricing_description.get_pricing_description()
             contact_info = listing.get_contact_info()
             description = pricing_description + '<br><br>' + contact_info + '<br><br>' + general_description
             if listing.listing.address.point.is_address_approximated():

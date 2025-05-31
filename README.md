@@ -4,12 +4,12 @@ Coleta dados de imóveis disponíveis para aluguel diretamente da API de dados d
 
 ## Instalação
 Clone o repositório e, em um ambiente virtual, instale as dependências
-```unix
+```console
 $ pip install -r requirements.txt
 ```
 
 ## Execução
-```unix
+```console
 $ python3 app.py
 ```
 ### Arquivos gerados
@@ -37,6 +37,8 @@ $ python3 app.py
 * `rent_price_min` (`int`): Valor mínimo do aluguel
 * `rent_price_max` (`int`): Valor máximo do aluguel
 * `neighborhood` (`str`): Nome do bairro como aparece no site. Ex: `Butantã`, `Boa Viagem`, etc.
+* `pets_allowed` (`str`): Se `True`, filtra apenas os imóveis que aceitam pets e que possuem a flag `PETS_ALLOWED` na descrição. Caso contrário, busca todos os resultados
+* `min_unit_floor` (`int`): Se fornecido, busca apenas os imóveis cujo andar foi informado na descrição e é maior que `min_unit_floor`
 
 
 ## Como abrir o arquivo KMZ

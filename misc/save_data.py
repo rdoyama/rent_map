@@ -42,4 +42,6 @@ class SaveData:
             for i, listing in enumerate(self.listings_csv):
                 if i == 0:
                     csv_file.write(listing.get_csv_headers() + '\n')
-                csv_file.write(listing.get_csv_line(base_url) + '\n')
+                line = listing.get_csv_line(base_url)
+                if line is not None:
+                    csv_file.write(line + '\n')
