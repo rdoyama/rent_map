@@ -107,6 +107,9 @@ class Listing:
     link: Optional[Link] = None
     account: Optional[Account] = None
 
+    kml_icon = 'http://maps.google.com/mapfiles/kml/paddle/grn-blank.png'
+    kml_icon_color = 'ff31b87c'
+
     def get_address_point(self) -> AddressPoint | None:
         listing_obj = self.listing
         if listing_obj is None:

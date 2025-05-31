@@ -25,7 +25,8 @@ def main():
     zap_api = ZapRequest(zap_configs, filters_kmz)
     zap_listings = zap_api.get_all()
 
-    kmz = KMZ(zap_listings, zap_configs)
+    utilities = config['UTILITY']
+    kmz = KMZ(zap_listings, zap_configs, utilities)
     kmz.process_listings()
 
 

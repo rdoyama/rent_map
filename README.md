@@ -39,7 +39,8 @@ $ python3 app.py
 * `neighborhood` (`str`): Nome do bairro como aparece no site. Ex: `Butantã`, `Boa Viagem`, etc.
 * `pets_allowed` (`str`): Se `True`, filtra apenas os imóveis que aceitam pets e que possuem a flag `PETS_ALLOWED` na descrição. Caso contrário, busca todos os resultados
 * `min_unit_floor` (`int`): Se fornecido, busca apenas os imóveis cujo andar foi informado na descrição e é maior que `min_unit_floor`
-
+#### `[UTILITY]`
+* `add_markets` (`str`): Se `True`, mostra no mapa todos os mercados descritos no arquivo `resources/markets.json`
 
 ## Como abrir o arquivo KMZ
 ### Google Earth
