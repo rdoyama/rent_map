@@ -12,15 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 class KMZ:
-    def __init__(self, listings: list[Listing], config: Any, utilities: Any, destination: str = 'rentMap.kmz'):
-        self.listings = listings
+    def __init__(self, utilities: Any, destination: str = 'rentMap.kmz'):
         self.destination = destination
         self.kml = simplekml.Kml(open=1, name='RentMap')
-        self.base_url = config['base_url']
         self.utilities = utilities
+        self.base_url = ''
 
-    def process_listings(self):
-        for listing in self.listings:
+    def set_base_url(self, base_url: str):
+        self.base_url = base_url
+
+    def process_listings(self, listings: list[Listing]):
+        for listing in listings:
             address_point = listing.get_address_point()
             if address_point is None:
                 error_message = f"Address Point {address_point} not found. Program will continue"
@@ -40,9 +42,11 @@ class KMZ:
                 description = self.get_approximated_address_warn(listing.listing.address.get_address()) + '<br><br>' + description
             href = listing.link.href
 
-            self.populate_kml(lat, lon, description, href, icon=listing.kml_icon, icon_color=listing.kml_icon_color)
-        self.add_utilities()
-        self.generate_kmz()
+            if self.is_price_below_average(listing):
+                star_icon = 'http://maps.google.com/mapfiles/kml/paddle/ylw-stars.png'
+                self.populate_kml(lat, lon, description, href, icon=star_icon)
+            else:
+                self.populate_kml(lat, lon, description, href, icon=listing.kml_icon, icon_color=listing.kml_icon_color)
 
     def populate_kml(self, lat: float, lon: float, description: str | None, href: str | None, title: str | None = '',
                      icon: str = None, icon_color: str = None, icon_scale: float = 1.0, label_scale: float = 0.8):
@@ -81,6 +85,9 @@ class KMZ:
         add_markets = True if self.utilities['add_markets'] == 'True' else False
         if add_markets:
             for market in self.get_markets_from_json():
-                logger.info(f'Checking Market name special chars: {market.name}')
                 self.populate_kml(market.lat, market.lon, None, None, market.name, market.icon,
                                   market.icon_color, market.icon_scale, market.label_scale)
+
+    @staticmethod
+    def is_price_below_average(listing: Listing) -> bool:
+        return 'DATAZAP_APPROVED_RENTAL' in listing.listing.stamps

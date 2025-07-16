@@ -82,6 +82,7 @@ class ListingModel:
     bedrooms: list[int] = ()
     pricingInfos: list[PricingInfo] = ()
     unitFloor: int = 0
+    stamps: list[str] = ()
 
     def get_rental_pricing_info(self) -> PricingInfo | None:
         rent = list(filter(lambda p: p.businessType == 'RENTAL', self.pricingInfos))
