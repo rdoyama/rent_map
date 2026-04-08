@@ -9,19 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class SaveData:
-    def __init__(self, prefix: str):
+    def __init__(self, config, listings: list[Listing], prefix: str = 'zapimoveis'):
         now = datetime.now()
         formatted_now = now.strftime("%Y%m%d-%H%M%S")
         self.subfolder_name = f'{formatted_now}'
-        self.listings_json = []
-        self.listings_csv = []
         self.prefix = prefix
-
-    def add_listings_json(self, listings: list[dict]):
-        self.listings_json += listings
-
-    def add_listings_csv(self, listings: list[Listing]):
-        self.listings_csv += listings
+        self.base_url = config['base_url']
+        self.listings = listings
 
     def create_directory_structure(self):
         if not os.path.isdir('data'):
@@ -31,18 +25,12 @@ class SaveData:
             os.mkdir(f'data/{self.subfolder_name}')
             logging.info(f'"data/{self.subfolder_name}" folder created')
 
-    def save_json_listings(self):
-        self.create_directory_structure()
-        with open(f'data/{self.subfolder_name}/{self.prefix}_listings.json', 'w', encoding='utf-8') as json_file:
-            json_file.write(json.dumps(self.listings_json, indent=4))
-            logging.info('The JSON file "listings.json" has been saved successfully')
-
-    def save_csv_listings(self, base_url: str):
+    def save(self):
         self.create_directory_structure()
         with open(f'data/{self.subfolder_name}/{self.prefix}_listings.csv', 'w', encoding='utf-8') as csv_file:
-            for i, listing in enumerate(self.listings_csv):
+            for i, listing in enumerate(self.listings):
                 if i == 0:
                     csv_file.write(listing.get_csv_headers() + '\n')
-                line = listing.get_csv_line(base_url)
+                line = listing.get_csv_line(self.base_url)
                 if line is not None:
                     csv_file.write(line + '\n')

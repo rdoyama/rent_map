@@ -4,7 +4,9 @@ from typing import Any, List
 
 import simplekml
 from pydantic import TypeAdapter
+from simplekml import Style
 
+from misc.color import Color, ColorInterpolation
 from model.MarketModel import MarketModel
 from model.listing_model import Listing
 
@@ -17,11 +19,23 @@ class KMZ:
         self.kml = simplekml.Kml(open=1, name='RentMap')
         self.utilities = utilities
         self.base_url = ''
+        self._set_styles()
 
     def set_base_url(self, base_url: str):
         self.base_url = base_url
 
+    def _set_styles(self):
+        self.star_icon = 'http://maps.google.com/mapfiles/kml/paddle/ylw-stars.png'
+        self.generic_pin = self.kml.addfile('resources/blank-pin.png')
+        self.grocery_icon = self.kml.addfile('resources/grocery_2.png')
+
     def process_listings(self, listings: list[Listing]):
+        listing_color_start = Color(204, 255, 204)
+        listing_color_end = Color(0, 115, 0)
+        prices = list(map(lambda l: l.listing.get_total_price() ,listings))
+        val_min = min(prices)
+        val_max = max(prices)
+        ci = ColorInterpolation(listing_color_start, listing_color_end, val_min, val_max)
         for listing in listings:
             address_point = listing.get_address_point()
             if address_point is None:
@@ -43,10 +57,11 @@ class KMZ:
             href = listing.link.href
 
             if self.is_price_below_average(listing):
-                star_icon = 'http://maps.google.com/mapfiles/kml/paddle/ylw-stars.png'
-                self.populate_kml(lat, lon, description, href, icon=star_icon)
+                self.populate_kml(lat, lon, description, href, icon=self.star_icon)
             else:
-                self.populate_kml(lat, lon, description, href, icon=listing.kml_icon, icon_color=listing.kml_icon_color)
+                price = listing.listing.get_total_price()
+                icon_color = ci.interpolate(price).to_kml_hex()
+                self.populate_kml(lat, lon, description, href, icon=self.generic_pin, icon_color=icon_color)
 
     def populate_kml(self, lat: float, lon: float, description: str | None, href: str | None, title: str | None = '',
                      icon: str = None, icon_color: str = None, icon_scale: float = 1.0, label_scale: float = 0.8):
@@ -64,7 +79,6 @@ class KMZ:
                 point.iconstyle.color = icon_color
         point.iconstyle.scale = icon_scale
         point.style.labelstyle.scale = label_scale
-
 
     def generate_kmz(self):
         self.kml.savekmz(self.destination)
@@ -85,7 +99,7 @@ class KMZ:
         add_markets = True if self.utilities['add_markets'] == 'True' else False
         if add_markets:
             for market in self.get_markets_from_json():
-                self.populate_kml(market.lat, market.lon, None, None, market.name, market.icon,
+                self.populate_kml(market.lat, market.lon, None, None, market.name, self.grocery_icon,
                                   market.icon_color, market.icon_scale, market.label_scale)
 
     @staticmethod

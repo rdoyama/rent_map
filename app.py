@@ -2,8 +2,11 @@ import configparser
 import logging
 import sys
 
-from custom_requests.base_request import BaseRequest
+from custom_requests.base_request import ZapRequests
 from kmz.kmz import KMZ
+from misc.filters import ListingFilterEngine
+from misc.multiple_data_apis import get_all_apis
+from misc.save_data import SaveData
 
 logger = logging.getLogger(__name__)
 
@@ -20,14 +23,28 @@ def main():
     config = configparser.RawConfigParser()
     config.read('config.ini')
 
-    filters_kmz = config['FILTERS_KMZ']
-
-    zap_configs = config['ZAP']
-    zap_api = BaseRequest(zap_configs, filters_kmz, 'zapimoveis')
-    zap_listings = zap_api.get_all()
+    filters = config['FILTERS']
+    filter_engine = ListingFilterEngine.from_config(filters)
 
     utilities = config['UTILITY']
     kmz = KMZ(utilities)
+
+    zap_configs = config['ZAP']
+    apis = get_all_apis(zap_configs)
+    zap_api = ZapRequests(zap_configs)
+    zap_listings = []
+
+    for api in apis:
+        zap_api.set_parsed_api_url(api)
+        zap_listings += zap_api.get_all()
+
+    zap_listings = filter_engine.apply(zap_listings)
+
+    if len(zap_listings) == 0:
+        return
+
+    if zap_configs['save_csv'] == 'True':
+        SaveData(zap_configs, zap_listings).save()
 
     kmz.set_base_url(zap_configs['base_url'])
     kmz.process_listings(zap_listings)

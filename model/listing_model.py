@@ -19,6 +19,7 @@ class PricingInfo:
     monthlyCondoFee: float = 0
     yearlyIptu: float = 0
     monthlyRentalTotalPrice: float = 0
+    iptu: float = 0
 
     def get_pricing_description(self):
         return f"Aluguel: R${self.price:.2f}<br>Condomínio: R${self.monthlyCondoFee:.2f}<br>IPTU: R${self.yearlyIptu:.2f}"
@@ -90,6 +91,12 @@ class ListingModel:
             return rent[0]
         return None
 
+    def get_total_price(self):
+        prices = self.get_rental_pricing_info()
+        if prices is None:
+            return 0
+        return prices.price + prices.monthlyCondoFee + prices.iptu
+
 
 @dataclass(config=ConfigDict(extra='ignore'))
 class Link:
@@ -108,7 +115,7 @@ class Listing:
     link: Optional[Link] = None
     account: Optional[Account] = None
 
-    kml_icon = 'http://maps.google.com/mapfiles/kml/paddle/grn-blank.png'
+    kml_icon = 'resources/blank-pin.png'
     kml_icon_color = 'ff31b87c'
 
     def get_address_point(self) -> AddressPoint | None:

@@ -8,10 +8,8 @@ class MarketModel:
     lat: float
     lon: float
 
-    #icon: str = 'http://maps.google.com/mapfiles/kml/pal3/icon18.png'
-    icon: str = 'resources/grocery_icon.png'
     icon_color: str = None
-    icon_scale: float = 0.9
+    icon_scale: float = 1.3
 
     label_scale: float = 0.7
 
